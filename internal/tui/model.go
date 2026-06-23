@@ -263,7 +263,7 @@ func (m Model) headerView() string {
 	default:
 		hint = styleDim.Render("  [q] quit  [h] history  [s] settings")
 	}
-	return styleHeader.Render(fmt.Sprintf("✈ CrashGame  %s  %s%s%s", name, bal, roundInfo, hint))
+	return styleHeader.Render(fmt.Sprintf("✈ Aviator  %s  %s%s%s", name, bal, roundInfo, hint))
 }
 
 // refreshPlayerCmd returns a command that fetches the current player record from DB.
