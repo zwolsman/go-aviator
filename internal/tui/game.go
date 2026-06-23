@@ -133,15 +133,20 @@ func (g gameModel) view() string {
 }
 
 func (g gameModel) planeView() string {
-	multStr := engine.FormatMult(g.snap.CurrentMultBP)
-	if g.snap.CurrentMultBP == 0 {
+	// when crashed, freeze display at the actual crash multiplier, not the overshoot tick
+	displayBP := g.snap.CurrentMultBP
+	if g.snap.State == engine.StateCrashed || g.snap.State == engine.StateSettling {
+		displayBP = g.snap.CrashMultBP
+	}
+
+	multStr := engine.FormatMult(displayBP)
+	if displayBP == 0 {
 		multStr = "1.00"
 	}
 
-	height := planeHeight(g.snap.CurrentMultBP)
+	height := planeHeight(displayBP)
 
 	var lines []string
-	// draw the multiplier on the correct row
 	for i := 12; i >= 0; i-- {
 		if i == height {
 			plane := "  ✈ " + g.root.st.mult.Render(multStr+"x")
@@ -157,12 +162,9 @@ func (g gameModel) planeView() string {
 		lines = append(lines, g.root.st.dim.Render("  Waiting..."))
 	}
 
-	// trajectory line
-	trajectory := buildTrajectory(g.snap.CurrentMultBP)
-
 	return lipgloss.JoinVertical(lipgloss.Left,
 		strings.Join(lines, "\n"),
-		trajectory,
+		g.buildTrajectory(displayBP),
 	)
 }
 
@@ -192,13 +194,13 @@ func logApprox(x float64) float64 {
 	return n
 }
 
-func buildTrajectory(multBP int) string {
+func (g gameModel) buildTrajectory(multBP int) string {
 	cols := 60
 	pos := int(float64(multBP) / 100.0 * 5)
 	if pos > cols {
 		pos = cols
 	}
-	return "  " + strings.Repeat("─", pos)
+	return g.root.st.dim.Render("  " + strings.Repeat("─", pos))
 }
 
 // historyBar renders a horizontal row of recent crash multipliers, newest first.
