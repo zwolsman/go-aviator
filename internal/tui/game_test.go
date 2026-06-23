@@ -39,6 +39,10 @@ func TestPlaneViewHasTrail(t *testing.T) {
 				State:         engine.StateFlying,
 				CurrentMultBP: tt.multBP,
 			}
+			// simulate flight history from 1x up to current multiplier
+			if tt.multBP > 100 {
+				m.game.multHistory = []int{100, tt.multBP}
+			}
 
 			view := m.game.planeView()
 
@@ -68,6 +72,46 @@ func TestPlaneViewHasTrail(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestPlaneViewGraphRises verifies that the trail spans multiple screen rows,
+// meaning the graph actually curves upward rather than staying flat.
+func TestPlaneViewGraphRises(t *testing.T) {
+	m := testModel()
+	m.game.snap = engine.Snapshot{
+		State:         engine.StateFlying,
+		CurrentMultBP: 1000, // 10x
+	}
+	// history spanning 1x → 2x → 5x → 10x so the curve visibly rises
+	m.game.multHistory = []int{100, 200, 500, 1000}
+
+	view := m.game.planeView()
+	rows := strings.Split(view, "\n")
+
+	// Count how many distinct rows contain graph characters.
+	trailRowCount := 0
+	lowestTrailRow := -1 // highest index = lowest on screen = where 1x trail starts
+	planeRow := -1
+	for i, row := range rows {
+		if strings.ContainsAny(row, "─│") {
+			trailRowCount++
+			lowestTrailRow = i
+		}
+		if strings.Contains(row, "✈") {
+			planeRow = i
+		}
+	}
+
+	if trailRowCount <= 1 {
+		t.Errorf("expected trail on multiple rows (rising graph), got trail on %d row(s)", trailRowCount)
+	}
+	if planeRow == -1 {
+		t.Fatal("no plane glyph found in graph")
+	}
+	// The 1x start of the trail is at the bottom; the plane (high mult) is above it.
+	if lowestTrailRow <= planeRow {
+		t.Errorf("graph does not rise: trail bottom at row %d should be below plane at row %d", lowestTrailRow, planeRow)
 	}
 }
 

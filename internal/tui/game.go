@@ -21,6 +21,7 @@ type gameModel struct {
 	lastAmountStr   string // remembered from previous round
 	lastAcStr       string
 	lastDisplayName string // kept in sync; safe alternative to root.player.DisplayName
+	multHistory     []int  // CurrentMultBP sampled each flying tick; reset at new round
 }
 
 func newGameModel(root *Model) gameModel {
@@ -33,6 +34,7 @@ func (g *gameModel) onSnapshot(snap engine.Snapshot) {
 
 	// auto-show bet form when a new betting window opens
 	if snap.State == engine.StateBetting && prev.State != engine.StateBetting {
+		g.multHistory = nil // clear graph for new round
 		g.showBetForm = true
 		g.betEntry = newBetModel(g.root)
 		g.betEntry.amountStr = g.lastAmountStr
@@ -40,8 +42,9 @@ func (g *gameModel) onSnapshot(snap engine.Snapshot) {
 		g.betEntry.playerName = g.lastDisplayName
 		// maxBet is corrected by the playerRefreshedMsg that fires on state change
 	}
-	// hide form when flying
+	// record multiplier each flying tick; hide form
 	if snap.State == engine.StateFlying {
+		g.multHistory = append(g.multHistory, snap.CurrentMultBP)
 		g.showBetForm = false
 	}
 }
@@ -132,6 +135,24 @@ func (g gameModel) view() string {
 	return sb.String()
 }
 
+const (
+	graphCols = 60
+	graphRows = 12
+)
+
+// trajectoryLen maps a multiplier (basis points) to how many grid columns the
+// trail occupies. 0 at 1x, grows linearly, capped at graphCols.
+func trajectoryLen(multBP int) int {
+	if multBP <= 100 {
+		return 0
+	}
+	pos := int(float64(multBP-100) / 100.0 * 5)
+	if pos > graphCols {
+		pos = graphCols
+	}
+	return pos
+}
+
 func (g gameModel) planeView() string {
 	// freeze at actual crash multiplier, not the overshoot tick
 	displayBP := g.snap.CurrentMultBP
@@ -144,18 +165,73 @@ func (g gameModel) planeView() string {
 		multStr = "1.00"
 	}
 
-	height := planeHeight(displayBP)
-	trajLen := trajectoryLen(displayBP)
-	trail := g.root.st.dim.Render(strings.Repeat("─", trajLen))
+	// trailCols is how many columns the historical path occupies.
+	// The plane sits immediately to the right of those columns.
+	// At 1x trailCols=0 → plane is at the left edge ("on the ground").
+	trailCols := trajectoryLen(displayBP)
+
+	// Build 2D character grid: grid[row][col], row 0 = top of screen.
+	var grid [graphRows + 1][graphCols]rune
+	for r := range grid {
+		for c := range grid[r] {
+			grid[r][c] = ' '
+		}
+	}
+
+	history := g.multHistory
+	n := len(history)
+	if n > 0 && trailCols > 0 {
+		prevRow := -1
+		for col := 0; col < trailCols; col++ {
+			histIdx := 0
+			if n > 1 && trailCols > 1 {
+				histIdx = col * (n - 1) / (trailCols - 1)
+				if histIdx >= n {
+					histIdx = n - 1
+				}
+			}
+			bp := history[histIdx]
+			h := planeHeight(bp)
+			gridRow := graphRows - h // 0=top, graphRows=bottom
+			if gridRow < 0 {
+				gridRow = 0
+			}
+			if gridRow > graphRows {
+				gridRow = graphRows
+			}
+
+			grid[gridRow][col] = '─'
+
+			// fill vertical gap when the curve rises between columns
+			if prevRow >= 0 && prevRow != gridRow {
+				lo, hi := gridRow, prevRow
+				if lo > hi {
+					lo, hi = hi, lo
+				}
+				for r := lo + 1; r < hi; r++ {
+					grid[r][col] = '│'
+				}
+			}
+			prevRow = gridRow
+		}
+	}
+
+	// Plane row is determined by the current multiplier height.
+	planeRow := graphRows - planeHeight(displayBP)
+	if planeRow < 0 {
+		planeRow = 0
+	}
+	if planeRow > graphRows {
+		planeRow = graphRows
+	}
 
 	var lines []string
-	for i := 12; i >= 0; i-- {
-		if i == height {
-			// trail and plane on the same line: ──────✈ 2.34x
-			lines = append(lines, "  "+trail+"✈ "+g.root.st.mult.Render(multStr+"x"))
-		} else {
-			lines = append(lines, "")
+	for r := 0; r <= graphRows; r++ {
+		line := "  " + g.root.st.dim.Render(string(grid[r][:trailCols]))
+		if r == planeRow {
+			line += "✈ " + g.root.st.mult.Render(multStr+"x")
 		}
+		lines = append(lines, line)
 	}
 
 	if g.snap.State == engine.StateCrashed {
@@ -191,17 +267,6 @@ func logApprox(x float64) float64 {
 		n++
 	}
 	return n
-}
-
-func trajectoryLen(multBP int) int {
-	if multBP <= 100 {
-		return 0
-	}
-	pos := int(float64(multBP-100) / 100.0 * 5)
-	if pos > 60 {
-		pos = 60
-	}
-	return pos
 }
 
 // historyBar renders a horizontal row of recent crash multipliers, newest first.
