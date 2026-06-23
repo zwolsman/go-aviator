@@ -1,6 +1,9 @@
-# SSH host key — mount as a k8s secret, never commit
+# SSH keys — never commit
 keys/host_ed25519
 keys/host_ed25519.pub
+*.pub
+test
+test.pub
 
 # Build output
 /aviator
