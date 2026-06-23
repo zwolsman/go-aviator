@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: go-aviator
+  labels:
+    app: go-aviator
+spec:
+  type: LoadBalancer
+  selector:
+    app: go-aviator
+  ports:
+    - name: ssh
+      port: 2222
+      targetPort: 2222
+      protocol: TCP

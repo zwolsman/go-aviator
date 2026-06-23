@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: go-aviator
+  labels:
+    app: go-aviator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: go-aviator
+  template:
+    metadata:
+      labels:
+        app: go-aviator
+    spec:
+      containers:
+        - name: go-aviator
+          image: zwolsman/go-aviator:latest
+          ports:
+            - containerPort: 2222
+              name: ssh
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: go-aviator-db
+                  key: url
+          volumeMounts:
+            - name: ssh-host-key
+              mountPath: /app/keys
+              readOnly: true
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          readinessProbe:
+            tcpSocket:
+              port: 2222
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: ssh-host-key
+          secret:
+            secretName: go-aviator-host-key
+            items:
+              - key: host_ed25519
+                path: host_ed25519
+                mode: 0600
