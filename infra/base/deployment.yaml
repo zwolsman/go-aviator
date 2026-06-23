@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: go-aviator
-          image: zwolsman/go-aviator:latest
+          image: ghcr.io/zwolsman/go-aviator:latest
           ports:
             - containerPort: 2222
               name: ssh
