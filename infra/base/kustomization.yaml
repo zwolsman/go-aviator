@@ -12,12 +12,12 @@ resources:
 #
 # Or copy your existing key into keys/host_ed25519.
 # Kustomize will read the file and create the Secret automatically.
-secretGenerator:
-  - name: go-aviator-host-key
-    files:
-      - host_ed25519=../../keys/host_ed25519
-    options:
-      disableNameSuffixHash: true
+#secretGenerator:
+#  - name: go-aviator-host-key
+#    files:
+#      - host_ed25519=../../keys/host_ed25519
+#    options:
+#      disableNameSuffixHash: true
 
 # Database URL secret must be created out-of-band:
 #   kubectl create secret generic go-aviator-db \
