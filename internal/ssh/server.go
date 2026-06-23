@@ -94,7 +94,7 @@ func (s *Server) bubbleTeaHandler() wishbt.Handler {
 			displayName = fp[:12]
 		}
 
-		player, alreadyActive, err := s.idm.Login(sess.Context(), fp, displayName)
+		player, alreadyActive, isNew, err := s.idm.Login(sess.Context(), fp, displayName)
 		if err != nil {
 			slog.Error("login failed", "fp", fp, "err", err)
 			wish.Fatalf(sess, "login error: %v\r\n", err)
@@ -118,7 +118,7 @@ func (s *Server) bubbleTeaHandler() wishbt.Handler {
 		slog.Info("session started", "displayName", displayName, "balance", player.Balance)
 		renderer := wishbt.MakeRenderer(sess)
 		renderer.SetColorProfile(termenv.TrueColor)
-		model := tui.New(player, s.db, s.eng, snapCh, unsub, renderer)
+		model := tui.New(player, s.db, s.eng, snapCh, unsub, renderer, isNew)
 		return model, []tea.ProgramOption{tea.WithAltScreen()}
 	}
 }

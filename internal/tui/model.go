@@ -15,7 +15,8 @@ import (
 type screen int
 
 const (
-	screenGame screen = iota
+	screenWelcome screen = iota
+	screenGame
 	screenInspect
 	screenSettings
 )
@@ -85,14 +86,19 @@ func New(
 	snapCh <-chan engine.Snapshot,
 	unsubFn func(),
 	renderer *lipgloss.Renderer,
+	isNew bool,
 ) Model {
+	startScreen := screenGame
+	if isNew {
+		startScreen = screenWelcome
+	}
 	m := Model{
 		player:   player,
 		queries:  queries,
 		eng:      eng,
 		snapCh:   snapCh,
 		unsubFn:  unsubFn,
-		screen:   screenGame,
+		screen:   startScreen,
 		renderer: renderer,
 		st:       newStyles(renderer),
 	}
@@ -124,7 +130,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c":
 			m.unsubFn()
 			return m, tea.Quit
+		}
 
+		if m.screen == screenWelcome {
+			if msg.String() == "s" || msg.String() == "S" {
+				m.screen = screenSettings
+				m.settings = newSettingsModel(&m, m.player.DisplayName)
+			} else {
+				m.screen = screenGame
+			}
+			return m, nil
+		}
+
+		switch msg.String() {
 		case "q", "esc":
 			switch m.screen {
 			case screenSettings:
@@ -249,6 +267,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m Model) View() string {
 	header := m.headerView()
+	if m.screen == screenWelcome {
+		return m.welcomeView()
+	}
+
 	var body string
 	switch m.screen {
 	case screenGame:
