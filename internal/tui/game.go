@@ -146,14 +146,13 @@ func (g gameModel) planeView() string {
 
 	height := planeHeight(displayBP)
 	trajLen := trajectoryLen(displayBP)
-
-	// plane sits at the tip of the trajectory
-	indent := strings.Repeat(" ", 2+trajLen)
+	trail := g.root.st.dim.Render(strings.Repeat("─", trajLen))
 
 	var lines []string
 	for i := 12; i >= 0; i-- {
 		if i == height {
-			lines = append(lines, indent+"✈ "+g.root.st.mult.Render(multStr+"x"))
+			// trail and plane on the same line: ──────✈ 2.34x
+			lines = append(lines, "  "+trail+"✈ "+g.root.st.mult.Render(multStr+"x"))
 		} else {
 			lines = append(lines, "")
 		}
@@ -165,10 +164,7 @@ func (g gameModel) planeView() string {
 		lines = append(lines, g.root.st.dim.Render("  Waiting..."))
 	}
 
-	return lipgloss.JoinVertical(lipgloss.Left,
-		strings.Join(lines, "\n"),
-		g.buildTrajectory(displayBP),
-	)
+	return strings.Join(lines, "\n")
 }
 
 func planeHeight(multBP int) int {
@@ -198,15 +194,14 @@ func logApprox(x float64) float64 {
 }
 
 func trajectoryLen(multBP int) int {
-	pos := int(float64(multBP) / 100.0 * 5)
+	if multBP <= 100 {
+		return 0
+	}
+	pos := int(float64(multBP-100) / 100.0 * 5)
 	if pos > 60 {
 		pos = 60
 	}
 	return pos
-}
-
-func (g gameModel) buildTrajectory(multBP int) string {
-	return g.root.st.dim.Render("  " + strings.Repeat("─", trajectoryLen(multBP)))
 }
 
 // historyBar renders a horizontal row of recent crash multipliers, newest first.
