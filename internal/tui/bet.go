@@ -111,46 +111,46 @@ func (b betModel) submit() (betModel, tea.Cmd) {
 
 func (b betModel) view() string {
 	if b.submitted {
-		return styleSuccess.Render("  Bet placed! Waiting for takeoff...")
+		return b.root.st.success.Render("  Bet placed! Waiting for takeoff...")
 	}
 
 	var sb strings.Builder
-	sb.WriteString(styleBold.Render("  Place your bet") + "\n\n")
+	sb.WriteString(b.root.st.bold.Render("  Place your bet") + "\n\n")
 
 	// amount field
 	amountLabel := "  Amount: "
 	if b.field == fieldAmount {
-		amountLabel = styleInfo.Render("▶ Amount: ")
+		amountLabel = b.root.st.info.Render("▶ Amount: ")
 	}
 	amountVal := b.amountStr
 	if amountVal == "" {
-		amountVal = styleDim.Render("_")
+		amountVal = b.root.st.dim.Render("_")
 	}
-	sb.WriteString(amountLabel + amountVal + fmt.Sprintf(styleDim.Render("  (max: %d)"), b.maxBet) + "\n")
+	sb.WriteString(amountLabel + amountVal + fmt.Sprintf(b.root.st.dim.Render("  (max: %d)"), b.maxBet) + "\n")
 
 	// auto-cashout field
 	acLabel := "  Auto-cashout: "
 	if b.field == fieldAutoCashout {
-		acLabel = styleInfo.Render("▶ Auto-cashout: ")
+		acLabel = b.root.st.info.Render("▶ Auto-cashout: ")
 	}
 	acVal := b.acStr
 	if acVal == "" {
-		acVal = styleDim.Render("_  (blank = manual)")
+		acVal = b.root.st.dim.Render("_  (blank = manual)")
 	}
 	sb.WriteString(acLabel + acVal + "\n")
 
 	if b.err != "" {
-		sb.WriteString(styleDanger.Render("  Error: "+b.err) + "\n")
+		sb.WriteString(b.root.st.danger.Render("  Error: "+b.err) + "\n")
 	}
 
 	// growth preview
 	if b.acStr != "" {
 		if f, err := strconv.ParseFloat(b.acStr, 64); err == nil {
 			bp := int(f * 100)
-			sb.WriteString(styleDim.Render(fmt.Sprintf("  Auto-cashout at %sx", engine.FormatMult(bp))) + "\n")
+			sb.WriteString(b.root.st.dim.Render(fmt.Sprintf("  Auto-cashout at %sx", engine.FormatMult(bp))) + "\n")
 		}
 	}
 
-	sb.WriteString(styleDim.Render("  [tab] switch field  [enter] place bet  [space] cashout while flying"))
+	sb.WriteString(b.root.st.dim.Render("  [tab] switch field  [enter] place bet  [space] cashout while flying"))
 	return sb.String()
 }

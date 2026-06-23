@@ -153,28 +153,28 @@ func (m inspectModel) view() string {
 
 func (m inspectModel) listView() string {
 	if m.loading {
-		return styleDim.Render("  Loading history...")
+		return m.root.st.dim.Render("  Loading history...")
 	}
 	if len(m.rounds) == 0 {
-		return styleDim.Render("  No completed rounds yet.")
+		return m.root.st.dim.Render("  No completed rounds yet.")
 	}
 
 	var sb strings.Builder
-	sb.WriteString(styleDim.Render("  [↑/↓] navigate   [enter] inspect   [q/esc] back") + "\n\n")
+	sb.WriteString(m.root.st.dim.Render("  [↑/↓] navigate   [enter] inspect   [q/esc] back") + "\n\n")
 
 	for i, r := range m.rounds {
 		prefix := "  "
 		if i == m.cursor {
-			prefix = styleInfo.Render("▶ ")
+			prefix = m.root.st.info.Render("▶ ")
 		}
-		multStyle := crashMultStyle(int(r.CrashMultiplier))
+		multStyle := crashMultStyle(m.root.renderer, int(r.CrashMultiplier))
 		line := fmt.Sprintf("%sGAME-%-5d  %s",
 			prefix,
 			r.ID,
 			multStyle.Render(engine.FormatMult(int(r.CrashMultiplier))+"x"),
 		)
 		if r.TotalPayout > 0 {
-			line += styleDim.Render(fmt.Sprintf("   paid out: %d", r.TotalPayout))
+			line += m.root.st.dim.Render(fmt.Sprintf("   paid out: %d", r.TotalPayout))
 		}
 		sb.WriteString(line + "\n")
 	}
@@ -184,29 +184,29 @@ func (m inspectModel) listView() string {
 
 func (m inspectModel) detailView() string {
 	if m.loading {
-		return styleDim.Render("  Loading history...")
+		return m.root.st.dim.Render("  Loading history...")
 	}
 	if len(m.rounds) == 0 {
-		return styleDim.Render("  No completed rounds yet.")
+		return m.root.st.dim.Render("  No completed rounds yet.")
 	}
 
 	var nav string
 	if m.directDetail {
-		nav = styleDim.Render("  [q/esc] back")
+		nav = m.root.st.dim.Render("  [q/esc] back")
 	} else {
-		nav = styleDim.Render("  [q/esc] back to list")
+		nav = m.root.st.dim.Render("  [q/esc] back to list")
 	}
 
 	if m.betsLoading {
-		return nav + "\n\n" + styleDim.Render("  Loading round details...")
+		return nav + "\n\n" + m.root.st.dim.Render("  Loading round details...")
 	}
 
 	round := m.rounds[m.cursor]
 	var sb strings.Builder
 	sb.WriteString(nav + "\n\n")
 
-	multStyle := crashMultStyle(int(round.CrashMultiplier))
-	sb.WriteString(styleBold.Render(fmt.Sprintf("  GAME-%d", round.ID)) +
+	multStyle := crashMultStyle(m.root.renderer, int(round.CrashMultiplier))
+	sb.WriteString(m.root.st.bold.Render(fmt.Sprintf("  GAME-%d", round.ID)) +
 		"  crashed at " + multStyle.Render(engine.FormatMult(int(round.CrashMultiplier))+"x") + "\n\n")
 
 	// winners only
@@ -221,16 +221,16 @@ func (m inspectModel) detailView() string {
 	})
 
 	if round.TotalPot > 0 {
-		sb.WriteString(fmt.Sprintf("  Total pot:    %s credits\n", styleBold.Render(fmt.Sprintf("%d", round.TotalPot))))
+		sb.WriteString(fmt.Sprintf("  Total pot:    %s credits\n", m.root.st.bold.Render(fmt.Sprintf("%d", round.TotalPot))))
 	}
 	if round.TotalPayout > 0 {
-		sb.WriteString(fmt.Sprintf("  Total payout: %s credits\n", styleSuccess.Render(fmt.Sprintf("%d", round.TotalPayout))))
+		sb.WriteString(fmt.Sprintf("  Total payout: %s credits\n", m.root.st.success.Render(fmt.Sprintf("%d", round.TotalPayout))))
 	}
 
 	if len(winners) > 0 {
 		sb.WriteString("\n")
-		sb.WriteString(styleBold.Render("  PLAYER              BET        CASHED OUT") + "\n")
-		sb.WriteString(styleDim.Render("  "+strings.Repeat("─", 52)) + "\n")
+		sb.WriteString(m.root.st.bold.Render("  PLAYER              BET        CASHED OUT") + "\n")
+		sb.WriteString(m.root.st.dim.Render("  "+strings.Repeat("─", 52)) + "\n")
 		for _, b := range winners {
 			name := b.DisplayName
 			if len(name) > 18 {
@@ -239,30 +239,30 @@ func (m inspectModel) detailView() string {
 			sb.WriteString(fmt.Sprintf("  %-18s  %-9d  %s\n",
 				name,
 				b.Amount,
-				styleSuccess.Render(fmt.Sprintf("✓ @%sx  +%d",
+				m.root.st.success.Render(fmt.Sprintf("✓ @%sx  +%d",
 					engine.FormatMult(int(b.CashedOutAtMultiplier.Int32)),
 					b.Payout.Int64)),
 			))
 		}
 	} else if len(m.bets) > 0 {
-		sb.WriteString(styleDim.Render("  No winners this round.") + "\n")
+		sb.WriteString(m.root.st.dim.Render("  No winners this round.") + "\n")
 	} else {
-		sb.WriteString(styleDim.Render("  No bets placed this round.") + "\n")
+		sb.WriteString(m.root.st.dim.Render("  No bets placed this round.") + "\n")
 	}
 
 	// provably fair
 	preimage, computed := engine.Commit(round.ID, int(round.CrashMultiplier), round.Salt)
 	ok := computed == round.CommitHash
-	sb.WriteString("\n" + styleBold.Render("  Provably Fair") + "\n")
-	sb.WriteString(styleDim.Render("  "+strings.Repeat("─", 60)) + "\n")
+	sb.WriteString("\n" + m.root.st.bold.Render("  Provably Fair") + "\n")
+	sb.WriteString(m.root.st.dim.Render("  "+strings.Repeat("─", 60)) + "\n")
 	sb.WriteString(fmt.Sprintf("  Preimage : %s\n", preimage))
 	sb.WriteString(fmt.Sprintf("  Commit   : %s\n", round.CommitHash))
 	if ok {
-		sb.WriteString("  " + styleSuccess.Render("✓ VERIFIED"))
+		sb.WriteString("  " + m.root.st.success.Render("✓ VERIFIED"))
 	} else {
-		sb.WriteString("  " + styleDanger.Render("✗ MISMATCH"))
+		sb.WriteString("  " + m.root.st.danger.Render("✗ MISMATCH"))
 	}
-	sb.WriteString("\n" + styleDim.Render("  Verify: echo -n '"+preimage+"' | sha256sum"))
+	sb.WriteString("\n" + m.root.st.dim.Render("  Verify: echo -n '"+preimage+"' | sha256sum"))
 
 	return sb.String()
 }

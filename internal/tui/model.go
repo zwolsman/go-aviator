@@ -29,6 +29,32 @@ type playerRefreshedMsg dbpkg.Player
 // recentCrashesMsg carries crash multipliers (basis points) for recent settled rounds.
 type recentCrashesMsg []int
 
+// tuiStyles holds all Lip Gloss styles for a session. Created from the
+// per-session renderer so colors work correctly inside containers.
+type tuiStyles struct {
+	header  lipgloss.Style
+	dim     lipgloss.Style
+	success lipgloss.Style
+	danger  lipgloss.Style
+	warning lipgloss.Style
+	info    lipgloss.Style
+	bold    lipgloss.Style
+	mult    lipgloss.Style
+}
+
+func newStyles(r *lipgloss.Renderer) tuiStyles {
+	return tuiStyles{
+		header:  r.NewStyle().Bold(true).Foreground(lipgloss.Color("33")),
+		dim:     r.NewStyle().Faint(true),
+		success: r.NewStyle().Foreground(lipgloss.Color("82")),
+		danger:  r.NewStyle().Foreground(lipgloss.Color("196")),
+		warning: r.NewStyle().Foreground(lipgloss.Color("214")),
+		info:    r.NewStyle().Foreground(lipgloss.Color("39")),
+		bold:    r.NewStyle().Bold(true),
+		mult:    r.NewStyle().Bold(true).Foreground(lipgloss.Color("226")),
+	}
+}
+
 // Model is the root Bubble Tea model.
 type Model struct {
 	player  dbpkg.Player
@@ -40,6 +66,9 @@ type Model struct {
 	width  int
 	height int
 	screen screen
+
+	renderer *lipgloss.Renderer
+	st       tuiStyles
 
 	game     gameModel
 	inspect  inspectModel
@@ -55,14 +84,17 @@ func New(
 	eng *engine.Engine,
 	snapCh <-chan engine.Snapshot,
 	unsubFn func(),
+	renderer *lipgloss.Renderer,
 ) Model {
 	m := Model{
-		player:  player,
-		queries: queries,
-		eng:     eng,
-		snapCh:  snapCh,
-		unsubFn: unsubFn,
-		screen:  screenGame,
+		player:   player,
+		queries:  queries,
+		eng:      eng,
+		snapCh:   snapCh,
+		unsubFn:  unsubFn,
+		screen:   screenGame,
+		renderer: renderer,
+		st:       newStyles(renderer),
 	}
 	m.game = newGameModel(&m)
 	m.game.lastDisplayName = player.DisplayName
@@ -233,17 +265,6 @@ func (m Model) View() string {
 	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, content)
 }
 
-var (
-	styleHeader  = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("33"))
-	styleDim     = lipgloss.NewStyle().Faint(true)
-	styleSuccess = lipgloss.NewStyle().Foreground(lipgloss.Color("82"))
-	styleDanger  = lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
-	styleWarning = lipgloss.NewStyle().Foreground(lipgloss.Color("214"))
-	styleInfo    = lipgloss.NewStyle().Foreground(lipgloss.Color("39"))
-	styleBold    = lipgloss.NewStyle().Bold(true)
-	styleMult    = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("226"))
-)
-
 func (m Model) headerView() string {
 	name := m.player.DisplayName
 	if name == "" {
@@ -257,13 +278,13 @@ func (m Model) headerView() string {
 	var hint string
 	switch m.screen {
 	case screenInspect:
-		hint = styleDim.Render("  [q/esc] back")
+		hint = m.st.dim.Render("  [q/esc] back")
 	case screenSettings:
-		hint = styleDim.Render("  [esc/q] cancel")
+		hint = m.st.dim.Render("  [esc/q] cancel")
 	default:
-		hint = styleDim.Render("  [q] quit  [h] history  [s] settings")
+		hint = m.st.dim.Render("  [q] quit  [h] history  [s] settings")
 	}
-	return styleHeader.Render(fmt.Sprintf("✈ Aviator  %s  %s%s%s", name, bal, roundInfo, hint))
+	return m.st.header.Render(fmt.Sprintf("✈ Aviator  %s  %s%s%s", name, bal, roundInfo, hint))
 }
 
 // refreshPlayerCmd returns a command that fetches the current player record from DB.

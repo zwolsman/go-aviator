@@ -13,9 +13,10 @@ import (
 	cssh "github.com/charmbracelet/ssh"
 	"github.com/charmbracelet/wish"
 	wishbt "github.com/charmbracelet/wish/bubbletea"
+	"github.com/muesli/termenv"
 
-	dbpkg "github.com/zwolsman/go-aviator/internal/db"
 	"github.com/zwolsman/go-aviator/internal/auth"
+	dbpkg "github.com/zwolsman/go-aviator/internal/db"
 	"github.com/zwolsman/go-aviator/internal/engine"
 	"github.com/zwolsman/go-aviator/internal/tui"
 )
@@ -49,7 +50,7 @@ func (s *Server) ListenAndServe() error {
 		wish.WithHostKeyPath(s.keyPath),
 		wish.WithPublicKeyAuth(s.publicKeyHandler()),
 		wish.WithMiddleware(
-			wishbt.MiddlewareWithColorProfile(s.bubbleTeaHandler(), 0),
+			wishbt.Middleware(s.bubbleTeaHandler()),
 		),
 	)
 	if err != nil {
@@ -115,7 +116,9 @@ func (s *Server) bubbleTeaHandler() wishbt.Handler {
 		}()
 
 		slog.Info("session started", "displayName", displayName, "balance", player.Balance)
-		model := tui.New(player, s.db, s.eng, snapCh, unsub)
+		renderer := wishbt.MakeRenderer(sess)
+		renderer.SetColorProfile(termenv.TrueColor)
+		model := tui.New(player, s.db, s.eng, snapCh, unsub, renderer)
 		return model, []tea.ProgramOption{tea.WithAltScreen()}
 	}
 }

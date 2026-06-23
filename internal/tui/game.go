@@ -94,30 +94,30 @@ func (g gameModel) view() string {
 		if g.showBetForm {
 			sb.WriteString(g.betEntry.view())
 		} else {
-			sb.WriteString(styleDim.Render("Bet submitted. Waiting for takeoff..."))
+			sb.WriteString(g.root.st.dim.Render("Bet submitted. Waiting for takeoff..."))
 		}
 		remaining := time.Until(g.snap.BettingEndsAt)
 		if remaining < 0 {
 			remaining = 0
 		}
-		sb.WriteString("\n" + styleInfo.Render(fmt.Sprintf("  Takeoff in: %.1fs", remaining.Seconds())))
+		sb.WriteString("\n" + g.root.st.info.Render(fmt.Sprintf("  Takeoff in: %.1fs", remaining.Seconds())))
 	case engine.StateFlying:
 		if g.betEntry.submitted {
 			if g.betEntry.acStr != "" {
-				sb.WriteString(styleInfo.Render(fmt.Sprintf("  Auto-cashout: %sx", g.betEntry.acStr)) +
-					styleDim.Render("  — SPACE to cash out early"))
+				sb.WriteString(g.root.st.info.Render(fmt.Sprintf("  Auto-cashout: %sx", g.betEntry.acStr)) +
+					g.root.st.dim.Render("  — SPACE to cash out early"))
 			} else {
-				sb.WriteString(styleWarning.Render("  Press SPACE to cash out!"))
+				sb.WriteString(g.root.st.warning.Render("  Press SPACE to cash out!"))
 			}
 		} else {
-			sb.WriteString(styleDim.Render("  Spectating — place a bet in the next round"))
+			sb.WriteString(g.root.st.dim.Render("  Spectating — place a bet in the next round"))
 		}
 	case engine.StateCrashed:
-		sb.WriteString(styleDanger.Render(fmt.Sprintf("  Crashed at %sx! Press [i] to inspect.", engine.FormatMult(g.snap.CrashMultBP))))
+		sb.WriteString(g.root.st.danger.Render(fmt.Sprintf("  Crashed at %sx! Press [i] to inspect.", engine.FormatMult(g.snap.CrashMultBP))))
 	case engine.StateSettling:
-		sb.WriteString(styleInfo.Render("  Settling round..."))
+		sb.WriteString(g.root.st.info.Render("  Settling round..."))
 	case engine.StateIdle:
-		sb.WriteString(styleDim.Render("  Waiting for players..."))
+		sb.WriteString(g.root.st.dim.Render("  Waiting for players..."))
 	}
 
 	// commit hash footer
@@ -126,7 +126,7 @@ func (g gameModel) view() string {
 		if len(short) > 16 {
 			short = short[:16] + "..."
 		}
-		sb.WriteString("\n" + styleDim.Render(fmt.Sprintf("  Commit: %s", short)))
+		sb.WriteString("\n" + g.root.st.dim.Render(fmt.Sprintf("  Commit: %s", short)))
 	}
 
 	return sb.String()
@@ -144,7 +144,7 @@ func (g gameModel) planeView() string {
 	// draw the multiplier on the correct row
 	for i := 12; i >= 0; i-- {
 		if i == height {
-			plane := "  ✈ " + styleMult.Render(multStr+"x")
+			plane := "  ✈ " + g.root.st.mult.Render(multStr+"x")
 			lines = append(lines, plane)
 		} else {
 			lines = append(lines, "")
@@ -152,9 +152,9 @@ func (g gameModel) planeView() string {
 	}
 
 	if g.snap.State == engine.StateCrashed {
-		lines = append(lines, styleDanger.Render("  💥 CRASHED at "+engine.FormatMult(g.snap.CrashMultBP)+"x"))
+		lines = append(lines, g.root.st.danger.Render("  💥 CRASHED at "+engine.FormatMult(g.snap.CrashMultBP)+"x"))
 	} else if g.snap.State == engine.StateIdle {
-		lines = append(lines, styleDim.Render("  Waiting..."))
+		lines = append(lines, g.root.st.dim.Render("  Waiting..."))
 	}
 
 	// trajectory line
@@ -198,8 +198,7 @@ func buildTrajectory(multBP int) string {
 	if pos > cols {
 		pos = cols
 	}
-	line := strings.Repeat("─", pos)
-	return styleDim.Render("  " + line)
+	return "  " + strings.Repeat("─", pos)
 }
 
 // historyBar renders a horizontal row of recent crash multipliers, newest first.
@@ -210,9 +209,9 @@ func (g gameModel) historyBar() string {
 	var parts []string
 	for _, bp := range g.recentCrashes {
 		label := engine.FormatMult(bp) + "x"
-		parts = append(parts, crashMultStyle(bp).Render(label))
+		parts = append(parts, crashMultStyle(g.root.renderer, bp).Render(label))
 	}
-	return styleDim.Render("  History: ") + strings.Join(parts, styleDim.Render("  "))
+	return g.root.st.dim.Render("  History: ") + strings.Join(parts, g.root.st.dim.Render("  "))
 }
 
 // crashMultStyle returns a lipgloss style for a crash multiplier in basis points.
@@ -222,20 +221,20 @@ func (g gameModel) historyBar() string {
 //   3.00–4.99x → yellow   (strong)
 //   5.00–9.99x → orange   (great)
 //   10.00x+    → gold bold (legendary)
-func crashMultStyle(bp int) lipgloss.Style {
+func crashMultStyle(r *lipgloss.Renderer, bp int) lipgloss.Style {
 	switch {
 	case bp >= 1000:
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("220")).Bold(true)
+		return r.NewStyle().Foreground(lipgloss.Color("220")).Bold(true)
 	case bp >= 500:
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("214"))
+		return r.NewStyle().Foreground(lipgloss.Color("214"))
 	case bp >= 300:
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("226"))
+		return r.NewStyle().Foreground(lipgloss.Color("226"))
 	case bp >= 200:
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("82"))
+		return r.NewStyle().Foreground(lipgloss.Color("82"))
 	case bp >= 150:
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("87"))
+		return r.NewStyle().Foreground(lipgloss.Color("87"))
 	default:
-		return lipgloss.NewStyle().Faint(true)
+		return r.NewStyle().Faint(true)
 	}
 }
 
@@ -248,13 +247,13 @@ func (g gameModel) participantsView() string {
 	// during betting: just show a headcount
 	if g.snap.State == engine.StateBetting {
 		if total == 0 {
-			return styleDim.Render("  No bets placed yet.\n")
+			return g.root.st.dim.Render("  No bets placed yet.\n")
 		}
-		return styleDim.Render(fmt.Sprintf("  %d player%s in the lobby.\n", total, pluralS(total)))
+		return g.root.st.dim.Render(fmt.Sprintf("  %d player%s in the lobby.\n", total, pluralS(total)))
 	}
 
 	if total == 0 {
-		return styleDim.Render("  No bets this round.\n")
+		return g.root.st.dim.Render("  No bets this round.\n")
 	}
 
 	// count still-in players
@@ -283,8 +282,8 @@ func (g gameModel) participantsView() string {
 	crashed := g.snap.State == engine.StateCrashed || g.snap.State == engine.StateSettling
 
 	var rows []string
-	rows = append(rows, styleBold.Render("  PLAYER               BET        STATUS"))
-	rows = append(rows, styleDim.Render("  "+strings.Repeat("─", 50)))
+	rows = append(rows, g.root.st.bold.Render("  PLAYER               BET        STATUS"))
+	rows = append(rows, g.root.st.dim.Render("  "+strings.Repeat("─", 50)))
 
 	shown := sorted
 	truncated := 0
@@ -300,22 +299,22 @@ func (g gameModel) participantsView() string {
 		}
 		var statusCol string
 		if p.CashedOut {
-			statusCol = styleSuccess.Render(fmt.Sprintf("✓ @%sx  +%d", engine.FormatMult(p.CashoutMult), p.Payout))
+			statusCol = g.root.st.success.Render(fmt.Sprintf("✓ @%sx  +%d", engine.FormatMult(p.CashoutMult), p.Payout))
 		} else if crashed {
-			statusCol = styleDanger.Render("✗ Lost")
+			statusCol = g.root.st.danger.Render("✗ Lost")
 		} else {
-			statusCol = styleWarning.Render("✈ In flight")
+			statusCol = g.root.st.warning.Render("✈ In flight")
 		}
 		rows = append(rows, fmt.Sprintf("  %-18s  %-9d  %s", name, p.Amount, statusCol))
 	}
 
 	if truncated > 0 {
-		rows = append(rows, styleDim.Render(fmt.Sprintf("  ...and %d more", truncated)))
+		rows = append(rows, g.root.st.dim.Render(fmt.Sprintf("  ...and %d more", truncated)))
 	}
 
 	// still-in summary (only meaningful while flying)
 	if !crashed && stillIn > 0 {
-		rows = append(rows, styleWarning.Render(fmt.Sprintf("  %d player%s still in flight", stillIn, pluralS(stillIn))))
+		rows = append(rows, g.root.st.warning.Render(fmt.Sprintf("  %d player%s still in flight", stillIn, pluralS(stillIn))))
 	}
 
 	return strings.Join(rows, "\n") + "\n"

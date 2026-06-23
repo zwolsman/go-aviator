@@ -112,7 +112,7 @@ go run ./cmd/server
 Connect from another terminal:
 
 ```sh
-ssh -p 2222 -i ~/.ssh/id_ed25519 localhost
+ssh -p 2222 -i test_id_ed25519 localhost
 ```
 
 A second connection with the same key is rejected — one active session per identity.

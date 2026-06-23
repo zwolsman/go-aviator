@@ -78,24 +78,24 @@ func (s settingsModel) saveCmd(name string) tea.Cmd {
 
 func (s settingsModel) view() string {
 	var sb strings.Builder
-	sb.WriteString(styleBold.Render("  Settings") + "\n\n")
+	sb.WriteString(s.root.st.bold.Render("  Settings") + "\n\n")
 
 	val := s.nameStr
 	if val == "" {
-		val = styleDim.Render("_")
+		val = s.root.st.dim.Render("_")
 	} else {
-		val += styleInfo.Render("█")
+		val += s.root.st.info.Render("█")
 	}
-	sb.WriteString(styleInfo.Render("  Display name: ") + val + "\n\n")
+	sb.WriteString(s.root.st.info.Render("  Display name: ") + val + "\n\n")
 
 	switch {
 	case s.saving:
-		sb.WriteString(styleDim.Render("  Saving..."))
+		sb.WriteString(s.root.st.dim.Render("  Saving..."))
 	case s.err != "":
-		sb.WriteString(styleDanger.Render("  "+s.err) + "\n")
-		sb.WriteString(styleDim.Render("  [enter] save  [esc/q] cancel"))
+		sb.WriteString(s.root.st.danger.Render("  "+s.err) + "\n")
+		sb.WriteString(s.root.st.dim.Render("  [enter] save  [esc/q] cancel"))
 	default:
-		sb.WriteString(styleDim.Render("  [enter] save  [esc/q] cancel"))
+		sb.WriteString(s.root.st.dim.Render("  [enter] save  [esc/q] cancel"))
 	}
 
 	return sb.String()
