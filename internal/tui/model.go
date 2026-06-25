@@ -19,6 +19,7 @@ const (
 	screenGame
 	screenInspect
 	screenSettings
+	screenLeaderboard
 )
 
 // SnapshotMsg wraps an engine snapshot for delivery as a tea.Msg.
@@ -71,11 +72,12 @@ type Model struct {
 	renderer *lipgloss.Renderer
 	st       tuiStyles
 
-	game     gameModel
-	inspect  inspectModel
-	settings settingsModel
-	lastSnap engine.Snapshot
-	err      string
+	game        gameModel
+	inspect     inspectModel
+	settings    settingsModel
+	leaderboard leaderboardModel
+	lastSnap    engine.Snapshot
+	err         string
 }
 
 // New creates the root TUI model for a connected player.
@@ -145,7 +147,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "q", "esc":
 			switch m.screen {
-			case screenSettings:
+			case screenSettings, screenLeaderboard:
 				m.screen = screenGame
 				return m, nil
 			case screenGame:
@@ -189,6 +191,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.settings = newSettingsModel(&m, m.player.DisplayName, m.player.Hidden)
 				return m, nil
 			}
+
+		case "l", "L":
+			if m.screen == screenGame {
+				m.screen = screenLeaderboard
+				m.leaderboard = newLeaderboardModel(&m)
+				return m, m.leaderboard.Init()
+			}
 		}
 
 		// delegate key to the active screen
@@ -208,6 +217,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case screenSettings:
 			var cmd tea.Cmd
 			m.settings, cmd = m.settings.update(msg)
+			return m, cmd
+		case screenLeaderboard:
+			var cmd tea.Cmd
+			m.leaderboard, cmd = m.leaderboard.update(msg)
 			return m, cmd
 		}
 
@@ -270,6 +283,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.inspect, cmd = m.inspect.update(msg)
 			return m, cmd
 		}
+
+	case leaderboardLoadedMsg:
+		if m.screen == screenLeaderboard {
+			var cmd tea.Cmd
+			m.leaderboard, cmd = m.leaderboard.update(msg)
+			return m, cmd
+		}
 	}
 
 	return m, nil
@@ -289,6 +309,8 @@ func (m Model) View() string {
 		body = m.inspect.view()
 	case screenSettings:
 		body = m.settings.view()
+	case screenLeaderboard:
+		body = m.leaderboard.view()
 	}
 	content := lipgloss.JoinVertical(lipgloss.Left, header, body)
 	if m.width == 0 || m.height == 0 {
@@ -314,7 +336,7 @@ func (m Model) headerView() string {
 	case screenSettings:
 		hint = m.st.dim.Render("  [esc/q] cancel")
 	default:
-		hint = m.st.dim.Render("  [q] quit  [h] history  [s] settings  [space] cash out")
+		hint = m.st.dim.Render("  [q] quit  [h] history  [l] leaderboard  [s] settings  [space] cash out")
 	}
 	return m.st.header.Render(fmt.Sprintf("✈ Aviator  %s  %s%s%s", name, bal, roundInfo, hint))
 }
