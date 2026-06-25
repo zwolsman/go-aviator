@@ -115,7 +115,7 @@ func (b *betModel) submitNow() {
 		b.err = errMsg
 		return
 	}
-	b.root.eng.PlaceBet(b.root.player.ID, b.playerName, amount, ac)
+	b.root.eng.PlaceBet(b.root.player.ID, b.playerName, b.root.player.Hidden, amount, ac)
 	b.placedThisRound = true
 	b.queued = false
 	b.err = ""
@@ -145,7 +145,7 @@ func (b *betModel) autoSubmitQueue() {
 		b.queued = false
 		return
 	}
-	b.root.eng.PlaceBet(b.root.player.ID, b.playerName, amount, ac)
+	b.root.eng.PlaceBet(b.root.player.ID, b.playerName, b.root.player.Hidden, amount, ac)
 	b.placedThisRound = true
 	b.queued = false
 	b.err = ""

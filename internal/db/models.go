@@ -27,6 +27,8 @@ type Player struct {
 	Balance           int64
 	LastCreditDate    sql.NullTime
 	CreatedAt         time.Time
+	Hidden            bool
+	BalanceUpdatedAt  time.Time
 }
 
 type Round struct {

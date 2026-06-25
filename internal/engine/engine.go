@@ -33,6 +33,7 @@ type command struct {
 	kind        cmdKind
 	playerID    int64
 	displayName string
+	hidden      bool
 	amount      int64
 	autoCashout int // basis points; 0 = manual only
 	sub         *subscriber
@@ -91,11 +92,12 @@ func (e *Engine) Subscribe(playerID int64, displayName string) (<-chan Snapshot,
 }
 
 // PlaceBet asks the engine to record a bet for a player.
-func (e *Engine) PlaceBet(playerID int64, displayName string, amount int64, autoCashoutBP int) {
+func (e *Engine) PlaceBet(playerID int64, displayName string, hidden bool, amount int64, autoCashoutBP int) {
 	e.inbox <- command{
 		kind:        cmdPlaceBet,
 		playerID:    playerID,
 		displayName: displayName,
+		hidden:      hidden,
 		amount:      amount,
 		autoCashout: autoCashoutBP,
 	}
@@ -405,6 +407,7 @@ func (e *Engine) handleCmd(cmd command) {
 		e.participants[cmd.playerID] = &Participant{
 			PlayerID:    cmd.playerID,
 			DisplayName: cmd.displayName,
+			Hidden:      cmd.hidden,
 			Amount:      cmd.amount,
 			AutoCashout: cmd.autoCashout,
 		}
@@ -463,6 +466,7 @@ func (e *Engine) snapshot() Snapshot {
 		views = append(views, ParticipantView{
 			PlayerID:    p.PlayerID,
 			DisplayName: p.DisplayName,
+			Hidden:      p.Hidden,
 			Amount:      p.Amount,
 			CashedOut:   p.CashedOut,
 			CashoutMult: p.CashoutMult,

@@ -11,9 +11,10 @@ import (
 
 const adjustBalance = `-- name: AdjustBalance :one
 UPDATE players
-SET balance = balance + $2
+SET balance = balance + $2,
+    balance_updated_at = now()
 WHERE id = $1
-RETURNING id, pubkey_fingerprint, display_name, balance, last_credit_date, created_at
+RETURNING id, pubkey_fingerprint, display_name, balance, last_credit_date, created_at, hidden, balance_updated_at
 `
 
 type AdjustBalanceParams struct {
@@ -31,6 +32,8 @@ func (q *Queries) AdjustBalance(ctx context.Context, arg AdjustBalanceParams) (P
 		&i.Balance,
 		&i.LastCreditDate,
 		&i.CreatedAt,
+		&i.Hidden,
+		&i.BalanceUpdatedAt,
 	)
 	return i, err
 }
@@ -38,7 +41,7 @@ func (q *Queries) AdjustBalance(ctx context.Context, arg AdjustBalanceParams) (P
 const createPlayer = `-- name: CreatePlayer :one
 INSERT INTO players (pubkey_fingerprint, display_name, balance)
 VALUES ($1, $2, $3)
-RETURNING id, pubkey_fingerprint, display_name, balance, last_credit_date, created_at
+RETURNING id, pubkey_fingerprint, display_name, balance, last_credit_date, created_at, hidden, balance_updated_at
 `
 
 type CreatePlayerParams struct {
@@ -57,12 +60,14 @@ func (q *Queries) CreatePlayer(ctx context.Context, arg CreatePlayerParams) (Pla
 		&i.Balance,
 		&i.LastCreditDate,
 		&i.CreatedAt,
+		&i.Hidden,
+		&i.BalanceUpdatedAt,
 	)
 	return i, err
 }
 
 const getPlayerByFingerprint = `-- name: GetPlayerByFingerprint :one
-SELECT id, pubkey_fingerprint, display_name, balance, last_credit_date, created_at FROM players WHERE pubkey_fingerprint = $1
+SELECT id, pubkey_fingerprint, display_name, balance, last_credit_date, created_at, hidden, balance_updated_at FROM players WHERE pubkey_fingerprint = $1
 `
 
 func (q *Queries) GetPlayerByFingerprint(ctx context.Context, pubkeyFingerprint string) (Player, error) {
@@ -75,6 +80,8 @@ func (q *Queries) GetPlayerByFingerprint(ctx context.Context, pubkeyFingerprint 
 		&i.Balance,
 		&i.LastCreditDate,
 		&i.CreatedAt,
+		&i.Hidden,
+		&i.BalanceUpdatedAt,
 	)
 	return i, err
 }
@@ -82,10 +89,11 @@ func (q *Queries) GetPlayerByFingerprint(ctx context.Context, pubkeyFingerprint 
 const grantDailyCredit = `-- name: GrantDailyCredit :one
 UPDATE players
 SET balance = balance + $2,
-    last_credit_date = CURRENT_DATE AT TIME ZONE 'UTC'
+    last_credit_date = CURRENT_DATE AT TIME ZONE 'UTC',
+    balance_updated_at = now()
 WHERE id = $1
   AND (last_credit_date IS NULL OR last_credit_date < CURRENT_DATE AT TIME ZONE 'UTC')
-RETURNING id, pubkey_fingerprint, display_name, balance, last_credit_date, created_at
+RETURNING id, pubkey_fingerprint, display_name, balance, last_credit_date, created_at, hidden, balance_updated_at
 `
 
 type GrantDailyCreditParams struct {
@@ -103,12 +111,14 @@ func (q *Queries) GrantDailyCredit(ctx context.Context, arg GrantDailyCreditPara
 		&i.Balance,
 		&i.LastCreditDate,
 		&i.CreatedAt,
+		&i.Hidden,
+		&i.BalanceUpdatedAt,
 	)
 	return i, err
 }
 
 const updateDisplayName = `-- name: UpdateDisplayName :one
-UPDATE players SET display_name = $1 WHERE id = $2 RETURNING id, pubkey_fingerprint, display_name, balance, last_credit_date, created_at
+UPDATE players SET display_name = $1 WHERE id = $2 RETURNING id, pubkey_fingerprint, display_name, balance, last_credit_date, created_at, hidden, balance_updated_at
 `
 
 type UpdateDisplayNameParams struct {
@@ -126,6 +136,33 @@ func (q *Queries) UpdateDisplayName(ctx context.Context, arg UpdateDisplayNamePa
 		&i.Balance,
 		&i.LastCreditDate,
 		&i.CreatedAt,
+		&i.Hidden,
+		&i.BalanceUpdatedAt,
+	)
+	return i, err
+}
+
+const updateHidden = `-- name: UpdateHidden :one
+UPDATE players SET hidden = $1 WHERE id = $2 RETURNING id, pubkey_fingerprint, display_name, balance, last_credit_date, created_at, hidden, balance_updated_at
+`
+
+type UpdateHiddenParams struct {
+	Hidden bool
+	ID     int64
+}
+
+func (q *Queries) UpdateHidden(ctx context.Context, arg UpdateHiddenParams) (Player, error) {
+	row := q.db.QueryRowContext(ctx, updateHidden, arg.Hidden, arg.ID)
+	var i Player
+	err := row.Scan(
+		&i.ID,
+		&i.PubkeyFingerprint,
+		&i.DisplayName,
+		&i.Balance,
+		&i.LastCreditDate,
+		&i.CreatedAt,
+		&i.Hidden,
+		&i.BalanceUpdatedAt,
 	)
 	return i, err
 }

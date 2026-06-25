@@ -232,9 +232,9 @@ func (m inspectModel) detailView() string {
 		sb.WriteString(m.root.st.bold.Render("  PLAYER              BET        CASHED OUT") + "\n")
 		sb.WriteString(m.root.st.dim.Render("  "+strings.Repeat("─", 52)) + "\n")
 		for _, b := range winners {
-			name := b.DisplayName
-			if len(name) > 18 {
-				name = name[:18]
+			name := maskName(m.root.player.ID, b.PlayerID, b.DisplayName, b.Hidden, m.root.st)
+			if len([]rune(name)) > 18 {
+				name = string([]rune(name)[:18])
 			}
 			sb.WriteString(fmt.Sprintf("  %-18s  %-9d  %s\n",
 				name,

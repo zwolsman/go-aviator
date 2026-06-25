@@ -46,7 +46,7 @@ func (q *Queries) CreateBet(ctx context.Context, arg CreateBetParams) (Bet, erro
 }
 
 const getBetsForRound = `-- name: GetBetsForRound :many
-SELECT b.id, b.round_id, b.player_id, b.amount, b.auto_cashout, b.cashed_out_at_multiplier, b.payout, b.created_at, p.pubkey_fingerprint, p.display_name
+SELECT b.id, b.round_id, b.player_id, b.amount, b.auto_cashout, b.cashed_out_at_multiplier, b.payout, b.created_at, p.pubkey_fingerprint, p.display_name, p.hidden
 FROM bets b
 JOIN players p ON p.id = b.player_id
 WHERE b.round_id = $1
@@ -63,6 +63,7 @@ type GetBetsForRoundRow struct {
 	CreatedAt             time.Time
 	PubkeyFingerprint     string
 	DisplayName           string
+	Hidden                bool
 }
 
 func (q *Queries) GetBetsForRound(ctx context.Context, roundID int64) ([]GetBetsForRoundRow, error) {
@@ -85,6 +86,7 @@ func (q *Queries) GetBetsForRound(ctx context.Context, roundID int64) ([]GetBets
 			&i.CreatedAt,
 			&i.PubkeyFingerprint,
 			&i.DisplayName,
+			&i.Hidden,
 		); err != nil {
 			return nil, err
 		}

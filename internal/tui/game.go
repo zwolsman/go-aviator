@@ -344,9 +344,9 @@ func (g gameModel) participantsView() string {
 	}
 
 	for _, p := range shown {
-		name := p.DisplayName
-		if len(name) > 18 {
-			name = name[:18]
+		name := maskName(g.root.player.ID, p.PlayerID, p.DisplayName, p.Hidden, g.root.st)
+		if len([]rune(name)) > 18 {
+			name = string([]rune(name)[:18])
 		}
 		var statusCol string
 		if p.CashedOut {
@@ -375,4 +375,12 @@ func pluralS(n int) string {
 		return ""
 	}
 	return "s"
+}
+
+// maskName returns "(hidden)" for another player who has hidden their profile.
+func maskName(viewerID, subjectID int64, name string, hidden bool, st tuiStyles) string {
+	if hidden && subjectID != viewerID {
+		return st.dim.Render("(hidden)")
+	}
+	return name
 }

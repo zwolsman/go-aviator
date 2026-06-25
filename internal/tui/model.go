@@ -135,7 +135,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.screen == screenWelcome {
 			if msg.String() == "s" || msg.String() == "S" {
 				m.screen = screenSettings
-				m.settings = newSettingsModel(&m, m.player.DisplayName)
+				m.settings = newSettingsModel(&m, m.player.DisplayName, m.player.Hidden)
 			} else {
 				m.screen = screenGame
 			}
@@ -186,7 +186,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "s", "S":
 			if m.screen == screenGame {
 				m.screen = screenSettings
-				m.settings = newSettingsModel(&m, m.player.DisplayName)
+				m.settings = newSettingsModel(&m, m.player.DisplayName, m.player.Hidden)
 				return m, nil
 			}
 		}
@@ -240,7 +240,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.player = dbpkg.Player(msg)
 		m.game.lastDisplayName = m.player.DisplayName
 		m.game.betEntry.playerName = m.player.DisplayName
-		m.screen = screenGame
+		if m.screen == screenSettings {
+			wasNameSave := m.settings.savingName
+			m.settings.saving = false
+			m.settings.savingName = false
+			if wasNameSave {
+				m.screen = screenGame
+			}
+		}
 		return m, nil
 
 	case settingsErrorMsg:

@@ -9,16 +9,21 @@ RETURNING *;
 -- name: GrantDailyCredit :one
 UPDATE players
 SET balance = balance + $2,
-    last_credit_date = CURRENT_DATE AT TIME ZONE 'UTC'
+    last_credit_date = CURRENT_DATE AT TIME ZONE 'UTC',
+    balance_updated_at = now()
 WHERE id = $1
   AND (last_credit_date IS NULL OR last_credit_date < CURRENT_DATE AT TIME ZONE 'UTC')
 RETURNING *;
 
 -- name: AdjustBalance :one
 UPDATE players
-SET balance = balance + $2
+SET balance = balance + $2,
+    balance_updated_at = now()
 WHERE id = $1
 RETURNING *;
 
 -- name: UpdateDisplayName :one
 UPDATE players SET display_name = $1 WHERE id = $2 RETURNING *;
+
+-- name: UpdateHidden :one
+UPDATE players SET hidden = $1 WHERE id = $2 RETURNING *;

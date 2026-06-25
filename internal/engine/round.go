@@ -34,6 +34,7 @@ func (s State) String() string {
 type Participant struct {
 	PlayerID    int64
 	DisplayName string
+	Hidden      bool
 	Amount      int64  // bet amount (credits)
 	AutoCashout int    // basis points; 0 = no auto cashout
 	BetID       int64  // DB row ID (after commit)
@@ -58,6 +59,7 @@ type Snapshot struct {
 type ParticipantView struct {
 	PlayerID    int64
 	DisplayName string
+	Hidden      bool
 	Amount      int64
 	CashedOut   bool
 	CashoutMult int   // 0 = still in or lost
