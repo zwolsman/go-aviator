@@ -461,6 +461,7 @@ func (e *Engine) snapshot() Snapshot {
 	views := make([]ParticipantView, 0, len(e.participants))
 	for _, p := range e.participants {
 		views = append(views, ParticipantView{
+			PlayerID:    p.PlayerID,
 			DisplayName: p.DisplayName,
 			Amount:      p.Amount,
 			CashedOut:   p.CashedOut,

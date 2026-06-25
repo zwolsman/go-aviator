@@ -56,6 +56,7 @@ type Snapshot struct {
 
 // ParticipantView is a read-only view of a participant for the TUI.
 type ParticipantView struct {
+	PlayerID    int64
 	DisplayName string
 	Amount      int64
 	CashedOut   bool

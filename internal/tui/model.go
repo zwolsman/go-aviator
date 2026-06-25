@@ -150,7 +150,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			case screenGame:
 				if msg.String() == "esc" {
-					return m, nil // esc does nothing on game screen
+					// Delegate to game so the bet form can cancel a queued bet.
+					var cmd tea.Cmd
+					m.game, cmd = m.game.update(msg)
+					return m, cmd
 				}
 				m.unsubFn()
 				return m, tea.Quit
@@ -304,7 +307,7 @@ func (m Model) headerView() string {
 	case screenSettings:
 		hint = m.st.dim.Render("  [esc/q] cancel")
 	default:
-		hint = m.st.dim.Render("  [q] quit  [h] history  [s] settings")
+		hint = m.st.dim.Render("  [q] quit  [h] history  [s] settings  [space] cash out")
 	}
 	return m.st.header.Render(fmt.Sprintf("✈ Aviator  %s  %s%s%s", name, bal, roundInfo, hint))
 }
